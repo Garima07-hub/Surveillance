@@ -1,0 +1,116 @@
+
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>webpart survellaince bot</title>
+     
+        
+    </head>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhai+2:wght@500&family=Gemunu+Libre:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        .button {background: color #adff2f;border: 2px solid rgb(128,128,128);border-radius: 4px;color: rgb(82, 72, 72);padding: 10px 25px;text-align: center;font-size: 16px;margin: 4px 2px;cursor: pointer; font-family: 'Baloo Bhai 2', cursive;}
+        .slider {appearance: none;width: 70%;height: 15px;border-radius: 10px;background: #463a3a;outline: none; font-family: 'Baloo Bhai 2', cursive;}
+        .slider::-webkit-slider-thumb {appearance: none;appearance: none;width: 30px;height: 30px;border-radius: 50%;background: #9a78a1; font-family: 'Baloo Bhai 2', cursive;}
+        .label {color: #8319a3;font-size: 18px; font-family: 'Baloo Bhai 2', cursive;}
+    </style>
+
+    <body>
+    <div align=center> <img id= "camstream" src="" style='width:300px;'></div>
+    <br/>
+    <br/>
+    <div align=center> 
+    <button class="button" id="forward" ontouchstart="fetch(document.location.origin+'/control?var=car&val=1');" ontouchend="fetch(document.location.origin+'/control?var=car&val=3');" >Forward</button>
+    </div>
+    <br/>
+    <div align=center> 
+    <button class="button" id="turnleft" ontouchstart="fetch(document.location.origin+'/control?var=car&val=2');" ontouchend="fetch(document.location.origin+'/control?var=car&val=3');" >Turn Left</button>
+    <button class="button" id="stop" onclick="fetch(document.location.origin+'/control?var=car&val=3');">Stop</button>
+    <button class="button" id="turnright" ontouchstart="fetch(document.location.origin+'/control?var=car&val=4');" ontouchend="fetch(document.location.origin+'/control?var=car&val=3');" >Turn Right</button>
+    </div>
+    <br/>
+     <div align=center> 
+    <button class="button" id="backward" ontouchstart="fetch(document.location.origin+'/control?var=car&val=5');" ontouchend="fetch(document.location.origin+'/control?var=car&val=3');">Backward</button>
+    </div>
+    <br/>
+    <div align=center> 
+    <label class="label">Flash</label>
+    <input type="range" class="slider" id="Flash" min="0" max="255" value="0" onchange="try{fetch(document.location.origin+'/control?var=Flash&val='+this.value);}catch(e){}">
+    </div>
+    <br/>
+    <div align=center> 
+    <label class="label">Speed</label>
+    <input type="range" class="slider" id="speed" min="0" max="255" value="255" onchange="try{fetch(document.location.origin+'/control?var=speed&val='+this.value);}catch(e){}">
+    </div>
+     <br/>
+    <div align=center> 
+    <button class="button" id="tiltup" onclick="fetch(document.location.origin+'/control?var=pantilt&val=1');" >Tilt Up</button>
+    </div>
+    <div align=center> 
+    <button class="button" id="panleft" onclick="fetch(document.location.origin+'/control?var=pantilt&val=2');" >Pan Left</button>
+    <button class="button" id="panright" onclick="fetch(document.location.origin+'/control?var=pantilt&val=3');" >Pan Right</button>
+    </div>
+     <div align=center> 
+    <button class="button" id="tiltdown" onclick="fetch(document.location.origin+'/control?var=pantilt&val=4');" >Tilt Down</button>
+    </div> 
+    <script>
+        window.onload = document.getElementById("camstream").src = window.location.href.slice(0, -1) + ":81/stream";
+    </script>
+    </body>
+</html>
+ rawliteral";
+
+static esp_err_t index_handler(httpd_req_t *req){ 
+    httpd_resp_set_type(req, "text/html");
+    return httpd_resp_send(req, (const char *)INDEX_HTML, strlen(INDEX_HTML));
+}
+
+void startCameraServer()
+{
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+
+    httpd_uri_t index_uri = {
+        .uri       = "/",
+        .method    = HTTP_GET,
+        .handler   = index_handler,
+        .user_ctx  = NULL
+    };
+
+    httpd_uri_t status_uri = {
+        .uri       = "/status",
+        .method    = HTTP_GET,
+        .handler   = status_handler,
+        .user_ctx  = NULL
+    };
+
+    httpd_uri_t cmd_uri = {
+        .uri       = "/control",
+        .method    = HTTP_GET,
+        .handler   = cmd_handler,
+        .user_ctx  = NULL
+    };
+
+   httpd_uri_t stream_uri = {
+        .uri       = "/stream",
+        .method    = HTTP_GET,
+        .handler   = stream_handler,
+        .user_ctx  = NULL
+    };
+    
+    Serial.printf("Starting web server on port: '%d'\n", config.server_port);
+    if (httpd_start(&camera_httpd, &config) == ESP_OK) {
+        httpd_register_uri_handler(camera_httpd, &index_uri);
+        httpd_register_uri_handler(camera_httpd, &cmd_uri);
+        httpd_register_uri_handler(camera_httpd, &status_uri);
+    }
+
+    config.server_port += 1;
+    config.ctrl_port += 1;
+    Serial.printf("Starting stream server on port: '%d'\n", config.server_port);
+    if (httpd_start(&stream_httpd, &config) == ESP_OK) {
+        httpd_register_uri_handler(stream_httpd, &stream_uri);
+    }
+} 
+
